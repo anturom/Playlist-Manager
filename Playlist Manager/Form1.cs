@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Xml;
 
@@ -38,8 +39,13 @@ namespace Playlist_Manager
                         root.Load(fileStream);
                         doc = root;
                         textBox1.Text = filePath;
-                        extractLibrary();
-                        populateDataGridView();
+                        
+                        // Execute time consuming code on another thread
+                        if (backgroundWorker1.IsBusy != true)
+                        {
+                            // Start the asynchronous operation.
+                            backgroundWorker1.RunWorkerAsync();
+                        }   
                     }
                 }
             }
@@ -182,5 +188,39 @@ namespace Playlist_Manager
             
         }
 
+        private void backgroundWorker1_DoWork_1(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker worker = sender as BackgroundWorker;
+            if (worker.CancellationPending == true)
+            {
+                e.Cancel = true;
+            }
+            else
+            {
+                Application.UseWaitCursor = true;
+                worker.ReportProgress(0);
+                // Perform time consuming operation                    
+                extractLibrary();
+            }
+        }
+
+        private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            if (e.Error != null)
+            {
+                Debug.WriteLine("Error: " + e.Error.Message);
+            }
+            else
+            {
+                Application.UseWaitCursor = false;
+                toolStripStatusLabel1.Text = "Ready.";
+                populateDataGridView();
+            }
+        }
+
+        private void backgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            toolStripStatusLabel1.Text = "Working... Please wait...";
+        }
     }
 }
