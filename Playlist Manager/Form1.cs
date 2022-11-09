@@ -83,7 +83,6 @@ namespace Playlist_Manager
                     }
                 }
             }
-            Debug.WriteLine("Found {0} playlists", lib.Playlists.Count);
         }
 
         private Playlist extractPlaylist(XmlNode playlist)
@@ -103,7 +102,6 @@ namespace Playlist_Manager
                         && plKey.NextSibling.InnerText != "Podcasts")
                     {
                         pl.Name = plKey.NextSibling.InnerText;
-                        Debug.WriteLine(pl.Name);
                     }
 
                     // extract tracks
@@ -208,13 +206,21 @@ namespace Playlist_Manager
         {
             if (e.Error != null)
             {
-                Debug.WriteLine("Error: " + e.Error.Message);
+                MessageBox.Show("Error: " + e.Error.Message);
             }
             else
             {
-                Application.UseWaitCursor = false;
-                toolStripStatusLabel1.Text = "Ready.";
                 populateDataGridView();
+                Application.UseWaitCursor = false;                
+                buttonExport.Enabled = true;
+                if(lib.Playlists != null && lib.Playlists.Count > 0)
+                {
+                    toolStripStatusLabel1.Text = String.Format("Found {0} playlists", lib.Playlists.Count);
+                } else
+                {
+                    toolStripStatusLabel1.Text = "No playlists found.";
+                }
+                
             }
         }
 
@@ -222,5 +228,40 @@ namespace Playlist_Manager
         {
             toolStripStatusLabel1.Text = "Working... Please wait...";
         }
+
+        private async void buttonExport_Click(object sender, EventArgs e)
+        {
+            var folderPath = string.Empty;
+
+            using (folderBrowserDialog1 as FolderBrowserDialog)
+            {
+                if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
+                {
+                    folderPath = folderBrowserDialog1.SelectedPath;
+                    if(lib.Playlists != null)
+                    {
+                        foreach(Playlist pl in lib.Playlists)
+                        {
+                            writePlaylist(pl, folderPath);
+                        }
+                    }
+                    toolStripStatusLabel1.Text = "Ready.";
+                }
+            }
+        }
+
+        async void writePlaylist(Playlist pl, string folderPath)
+        {
+            List<string> linesList = new List<string>();
+            if (pl.Tracks != null) {
+                foreach (Track tr in pl.Tracks)
+                {
+                    linesList.Add(tr.Artist + " - " + tr.Title);
+                }
+            }            
+            string[] lines = linesList.ToArray();
+            await File.WriteAllLinesAsync(folderPath + "\\" + pl.Name + ".txt", lines);
+        }
+
     }
 }
